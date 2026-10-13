@@ -25,6 +25,10 @@ async function runTests() {
 
   // 1. Run seed idempotently
   console.log('1. Verifying database seed...');
+  db.prepare('DELETE FROM reviews').run();
+  db.prepare('DELETE FROM bookings').run();
+  db.prepare('DELETE FROM guests').run();
+  db.prepare('DELETE FROM blocked_dates').run();
   runSeed();
   runSeed(); // Second run to verify idempotency
   console.log('  PASS: Seed is idempotent.\n');

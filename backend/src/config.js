@@ -19,7 +19,9 @@ const config = {
   maxBookingNights: 30,
   hotelName: 'Style Villa',
   adminEmail: process.env.ADMIN_EMAIL || 'admin@stylevilla.com',
-  adminPassword: process.env.ADMIN_PASSWORD || 'AdminPass123!'
+  adminPassword: process.env.ADMIN_PASSWORD || 'AdminPass123!',
+  supabaseUrl: process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+  supabaseKey: process.env.SUPABASE_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || ''
 };
 
 export default config;

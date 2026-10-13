@@ -99,7 +99,7 @@ app.use((req, res) => {
 app.use(errorHandler);
 
 // Start Server and initialize seed if fresh
-if (process.env.NODE_ENV !== 'test') {
+if (process.env.NODE_ENV !== 'test' && !process.argv[1]?.includes('verify.js')) {
   try {
     const roomCount = db.prepare('SELECT COUNT(*) as count FROM rooms').get().count;
     if (roomCount === 0) {

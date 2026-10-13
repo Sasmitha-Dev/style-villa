@@ -5,7 +5,7 @@ import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const FRONTEND_DIR = path.resolve(__dirname, 'frontend');
+const FRONTEND_DIR = __dirname;
 const PORT = 3000;
 
 const MIME_TYPES = {

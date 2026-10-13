@@ -95,6 +95,27 @@ async function loadOverviewStats() {
     document.getElementById('stat-occupancy').textContent = `${stats.occupancyRatePercent}%`;
     document.getElementById('stat-revenue').textContent = formatCurrency(stats.monthlyRevenue);
     document.getElementById('stat-pending').textContent = stats.pendingBookings;
+
+    // Check Supabase database connectivity
+    if (api.checkDatabaseConnection) {
+      const dbStatus = await api.checkDatabaseConnection();
+      const dbDot = document.getElementById('db-status-dot');
+      const dbTitle = document.getElementById('db-status-title');
+      const dbDesc = document.getElementById('db-status-desc');
+      const dbBtn = document.getElementById('btn-open-sql-editor');
+
+      if (dbStatus.tablesExist) {
+        if (dbDot) dbDot.style.background = '#22c55e';
+        if (dbTitle) dbTitle.textContent = 'Database: Supabase Connected & Synchronized';
+        if (dbDesc) dbDesc.textContent = 'Tables verified and active in Supabase.';
+        if (dbBtn) dbBtn.style.display = 'none';
+      } else {
+        if (dbDot) dbDot.style.background = '#f59e0b';
+        if (dbTitle) dbTitle.textContent = 'Database: Operating with Built-in Fallback Catalog';
+        if (dbDesc) dbDesc.textContent = dbStatus.message;
+        if (dbBtn) dbBtn.style.display = 'inline-block';
+      }
+    }
   } catch (err) {
     showToast('Failed to load stats: ' + err.message, 'error');
   }

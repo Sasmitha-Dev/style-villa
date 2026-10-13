@@ -61,6 +61,19 @@
             <div class="stat-val" id="stat-pending">-</div>
           </div>
         </div>
+
+        <div id="db-status-banner" style="margin-top: 1.5rem; padding: 1.25rem; border-radius: var(--radius-md); background: var(--surface); border: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+          <div>
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              <span id="db-status-dot" style="width: 10px; height: 10px; border-radius: 50%; background: #22c55e;"></span>
+              <strong id="db-status-title" style="font-size: 0.95rem;">Database Connection</strong>
+            </div>
+            <p id="db-status-desc" style="color: var(--muted); font-size: 0.8125rem; margin-top: 0.25rem;">Checking status...</p>
+          </div>
+          <a href="https://supabase.com/dashboard/project/rhukoaepajqryepnbwmy/sql" target="_blank" class="btn btn-outline btn-sm" id="btn-open-sql-editor" style="display: none;">
+            Open Supabase SQL Editor
+          </a>
+        </div>
       </section>
 
       <!-- 2. BOOKINGS TAB -->

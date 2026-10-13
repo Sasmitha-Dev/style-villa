@@ -218,3 +218,15 @@ INSERT INTO public.rooms (slug, name, description, price_per_night, currency, ma
   ('room-5', 'Room 5 - Boutique Villa Terrace Room', 'Upper-level tranquil room with private elevated balcony looking towards Lunuganga estate and palm canopy.', 85.00, 'USD', 2, '1 King Bed', 32, 'assets/images/room-5.jpg', '["assets/images/room-5.jpg"]'::jsonb, '["Free WiFi","Elevated Balcony","Air Conditioning","Work Desk","Pool Towels","Breakfast Service"]'::jsonb, true),
   ('room-6', 'Room 6 - Master Balcony Suite', 'Premium spacious sanctuary with private panoramic veranda, luxury bathroom, and quiet tropical setting.', 125.00, 'USD', 3, '1 King Bed + 1 Daybed', 52, 'assets/images/room-6.jpg', '["assets/images/room-6.jpg"]'::jsonb, '["Free WiFi","Panoramic Balcony","Air Conditioning","Mini Fridge","Loungers & Umbrellas","Free Bikes & Parking"]'::jsonb, true)
 ON CONFLICT (slug) DO NOTHING;
+
+-- ====================================================================
+-- API PERMISSIONS & SCHEMA CACHE RELOAD
+-- ====================================================================
+GRANT USAGE ON SCHEMA public TO anon, authenticated;
+GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO anon, authenticated;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO anon, authenticated;
+
+-- Force reload schema cache for PostgREST
+NOTIFY pgrst, 'reload schema';

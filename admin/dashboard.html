@@ -38,7 +38,10 @@
     <main class="admin-main">
       <!-- 1. OVERVIEW TAB -->
       <section class="admin-tab-pane" id="tab-overview">
-        <h2 style="font-size: 1.5rem; margin-bottom: 1.5rem;">Dashboard Overview</h2>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+          <h2 style="font-size: 1.5rem; margin-bottom: 0;">Dashboard Overview</h2>
+          <button type="button" class="btn btn-outline btn-sm" id="btn-refresh-overview">↻ Refresh Data</button>
+        </div>
         <div class="stats-grid">
           <div class="stat-card">
             <span style="font-size: 0.8125rem; color: var(--muted);">Today's Arrivals</span>
@@ -79,9 +82,9 @@
       <!-- 2. BOOKINGS TAB -->
       <section class="admin-tab-pane" id="tab-bookings" style="display: none;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
-          <h2 style="font-size: 1.5rem;">Reservations</h2>
-          <div style="display: flex; gap: 0.75rem;">
-            <input type="text" id="booking-search-input" class="form-input" placeholder="Search..." style="width: 200px;" />
+          <h2 style="font-size: 1.5rem; margin-bottom: 0;">Reservations</h2>
+          <div style="display: flex; gap: 0.75rem; align-items: center;">
+            <input type="text" id="booking-search-input" class="form-input" placeholder="Search ref or guest..." style="width: 200px;" />
             <select id="booking-status-filter" class="form-select" style="width: 140px;">
               <option value="">All Statuses</option>
               <option value="pending">Pending</option>
@@ -89,6 +92,7 @@
               <option value="completed">Completed</option>
               <option value="cancelled">Cancelled</option>
             </select>
+            <button type="button" class="btn btn-outline btn-sm" id="btn-refresh-bookings">↻ Refresh</button>
           </div>
         </div>
         <table class="admin-table">

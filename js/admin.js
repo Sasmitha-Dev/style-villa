@@ -1,4 +1,5 @@
 import { api, setAdminToken, clearAdminToken, getAdminToken } from './api.js';
+import { ensureSupabase } from './supabaseClient.js';
 import { formatCurrency, formatDate, showToast } from './utils.js';
 import {
   loadRoomsTable,
@@ -64,10 +65,50 @@ async function initAdminDashboard() {
     });
   });
 
+  document.getElementById('btn-refresh-overview')?.addEventListener('click', () => {
+    loadOverviewStats();
+    showToast('Overview refreshed.', 'info', 2000);
+  });
+
+  document.getElementById('btn-refresh-bookings')?.addEventListener('click', () => {
+    loadBookingsTable();
+    showToast('Reservations refreshed.', 'info', 2000);
+  });
+
   loadOverviewStats();
   initBookingsTab();
   initBlockedDatesTab();
   initSettingsTab();
+
+  // Cross-device live sync: Subscribe to Supabase database changes
+  try {
+    const client = await ensureSupabase();
+    if (client && client.channel) {
+      client.channel('admin-live-bookings')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, () => {
+          loadOverviewStats();
+          const bookingsPane = document.getElementById('tab-bookings');
+          if (bookingsPane && bookingsPane.style.display !== 'none') {
+            loadBookingsTable();
+          }
+        })
+        .subscribe();
+    }
+  } catch (e) {
+    console.warn('Realtime channel warning:', e);
+  }
+
+  // Cross-device background polling (every 8 seconds) so changes made on other devices appear automatically
+  setInterval(() => {
+    const overviewPane = document.getElementById('tab-overview');
+    if (overviewPane && overviewPane.style.display !== 'none') {
+      loadOverviewStats();
+    }
+    const bookingsPane = document.getElementById('tab-bookings');
+    if (bookingsPane && bookingsPane.style.display !== 'none') {
+      loadBookingsTable();
+    }
+  }, 8000);
 }
 
 function switchTab(tabId) {

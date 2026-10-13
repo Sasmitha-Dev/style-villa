@@ -362,48 +362,52 @@ export const api = {
     // 2. Overlap checks
     const unavailableRoomIds = new Set();
 
-    // Check Supabase if table exists
+    // Check Supabase directly (cross-device source of truth)
     try {
       const client = await ensureSupabase();
       if (client) {
-        const { data: bookedRows } = await client
+        const { data: bookedRows, error: bookErr } = await client
           .from('bookings')
           .select('room_id')
           .in('status', ['pending', 'confirmed'])
           .lt('check_in', checkOut)
           .gt('check_out', checkIn);
 
-        (bookedRows || []).forEach((b) => unavailableRoomIds.add(b.room_id));
+        if (!bookErr && Array.isArray(bookedRows)) {
+          bookedRows.forEach((b) => unavailableRoomIds.add(Number(b.room_id)));
+        }
 
-        const { data: blockedRows } = await client
+        const { data: blockedRows, error: blockErr } = await client
           .from('blocked_dates')
           .select('room_id')
           .lt('start_date', checkOut)
           .gt('end_date', checkIn);
 
-        (blockedRows || []).forEach((b) => unavailableRoomIds.add(b.room_id));
+        if (!blockErr && Array.isArray(blockedRows)) {
+          blockedRows.forEach((b) => unavailableRoomIds.add(Number(b.room_id)));
+        }
       }
     } catch (e) {
-      // Local fallback
+      console.warn('Supabase availability check error:', e);
     }
 
-    // Check local storage bookings
+    // Check local storage bookings as fallback/complement
     const localBookings = getLocalItem('style_villa_local_bookings', []);
     localBookings.forEach((b) => {
       if ((b.status === 'pending' || b.status === 'confirmed') && b.check_in < checkOut && b.check_out > checkIn) {
-        unavailableRoomIds.add(b.room_id);
+        unavailableRoomIds.add(Number(b.room_id));
       }
     });
 
     const localBlocks = getLocalItem('style_villa_local_blocked_dates', []);
     localBlocks.forEach((b) => {
       if (b.start_date < checkOut && b.end_date > checkIn) {
-        unavailableRoomIds.add(b.room_id);
+        unavailableRoomIds.add(Number(b.room_id));
       }
     });
 
     const availableRooms = capacityMatched
-      .filter((r) => !unavailableRoomIds.has(r.id))
+      .filter((r) => !unavailableRoomIds.has(Number(r.id)))
       .map((r) => {
         const formatted = formatRoom(r);
         const pricePerNight = Number(r.price_per_night);
@@ -426,7 +430,7 @@ export const api = {
   },
 
   /**
-   * Creates a new guest booking directly in Supabase with local redundancy.
+   * Creates a new guest booking directly in Supabase with cross-device sync.
    */
   createBooking: async (data) => {
     // Generate unique reference (SV-XXXXXX)
@@ -437,15 +441,39 @@ export const api = {
     }
 
     const rooms = await api.getRooms();
-    const room = rooms.find((r) => r.id === data.roomId) || rooms[0];
+    const room = rooms.find((r) => Number(r.id) === Number(data.roomId) || r.slug === data.roomSlug) || rooms[0];
 
     const nights = calculateNights(data.checkIn, data.checkOut);
     const totalPrice = Number((nights * Number(room.price_per_night)).toFixed(2));
 
+    const client = await ensureSupabase();
+
+    // 1. Double-booking conflict check: query active reservations in Supabase
+    if (client) {
+      try {
+        const { data: conflicts, error: conflictErr } = await client
+          .from('bookings')
+          .select('id, reference')
+          .eq('room_id', Number(room.id))
+          .in('status', ['pending', 'confirmed'])
+          .lt('check_in', data.checkOut)
+          .gt('check_out', data.checkIn);
+
+        if (!conflictErr && conflicts && conflicts.length > 0) {
+          const err = new Error('This room was just booked for these dates by another guest. Please select another room or change dates.');
+          err.status = 409;
+          throw err;
+        }
+      } catch (err) {
+        if (err.status === 409) throw err;
+        console.warn('Conflict check non-blocking warning:', err);
+      }
+    }
+
     const bookingPayload = {
       id: Date.now(),
       reference,
-      room_id: room.id,
+      room_id: Number(room.id),
       guest_name: data.guest?.fullName,
       guest_email: data.guest?.email,
       guest_phone: data.guest?.phone,
@@ -460,7 +488,7 @@ export const api = {
       special_requests: data.specialRequests || null,
       created_at: new Date().toISOString(),
       rooms: {
-        id: room.id,
+        id: Number(room.id),
         name: room.name,
         slug: room.slug,
         currency: room.currency || 'USD'
@@ -473,35 +501,35 @@ export const api = {
       }
     };
 
-    // Save to local storage immediately to ensure receipt is always available
+    // 2. Write directly to Supabase cloud database
+    if (client) {
+      const { error: insertErr } = await client.from('bookings').insert([{
+        reference,
+        room_id: Number(room.id),
+        guest_name: data.guest?.fullName,
+        guest_email: data.guest?.email,
+        guest_phone: data.guest?.phone,
+        guest_country: data.guest?.country,
+        check_in: data.checkIn,
+        check_out: data.checkOut,
+        adults: Number(data.adults),
+        children: Number(data.children || 0),
+        nights,
+        total_price: totalPrice,
+        status: 'pending',
+        special_requests: data.specialRequests || null
+      }]);
+
+      if (insertErr) {
+        console.error('Supabase booking insert error:', insertErr);
+        throw new Error(`Reservation could not be saved to cloud database: ${insertErr.message}`);
+      }
+    }
+
+    // Save to local storage as client cache
     const localBookings = getLocalItem('style_villa_local_bookings', []);
     localBookings.unshift(bookingPayload);
     setLocalItem('style_villa_local_bookings', localBookings);
-
-    // Sync to Supabase in the background / if table exists
-    try {
-      const client = await ensureSupabase();
-      if (client) {
-        await client.from('bookings').insert([{
-          reference,
-          room_id: room.id,
-          guest_name: data.guest?.fullName,
-          guest_email: data.guest?.email,
-          guest_phone: data.guest?.phone,
-          guest_country: data.guest?.country,
-          check_in: data.checkIn,
-          check_out: data.checkOut,
-          adults: Number(data.adults),
-          children: Number(data.children || 0),
-          nights,
-          total_price: totalPrice,
-          status: 'pending',
-          special_requests: data.specialRequests || null
-        }]);
-      }
-    } catch (err) {
-      console.warn('Supabase booking sync will retry when tables ready:', err);
-    }
 
     return {
       reference,
@@ -688,26 +716,64 @@ export const api = {
   },
 
   getAdminBookings: async (paramString = '') => {
-    let all = [...getLocalItem('style_villa_local_bookings', [])];
+    const params = new URLSearchParams(paramString);
+    const search = (params.get('search') || '').trim().toLowerCase();
+    const statusFilter = (params.get('status') || '').trim().toLowerCase();
+
+    let allBookings = [];
 
     try {
       const client = await ensureSupabase();
       if (client) {
-        const { data } = await client.from('bookings').select('*, rooms(name), guests(full_name, email)');
-        if (data && data.length > 0) {
-          all = data;
+        let query = client
+          .from('bookings')
+          .select('*, rooms(name), guests(full_name, email)')
+          .order('created_at', { ascending: false });
+
+        if (statusFilter) {
+          query = query.eq('status', statusFilter);
+        }
+
+        const { data, error } = await query;
+        if (!error && Array.isArray(data)) {
+          allBookings = data.map((b) => ({
+            ...b,
+            room_name: b.rooms?.name || b.room_name || 'Deluxe Room',
+            guest_name: b.guests?.full_name || b.guest_name || 'Guest',
+            guest_email: b.guests?.email || b.guest_email || ''
+          }));
+        } else if (error) {
+          console.warn('Supabase getAdminBookings error:', error);
         }
       }
-    } catch (e) {}
+    } catch (e) {
+      console.warn('Supabase getAdminBookings query failed:', e);
+    }
 
-    const bookings = all.map((b) => ({
-      ...b,
-      room_name: b.rooms?.name || b.room_name || 'Deluxe Room',
-      guest_name: b.guests?.full_name || b.guest_name || 'Guest',
-      guest_email: b.guests?.email || b.guest_email || ''
-    }));
+    // Fallback/merge with local bookings if Supabase returned empty
+    if (allBookings.length === 0) {
+      const local = getLocalItem('style_villa_local_bookings', []);
+      allBookings = local.map((b) => ({
+        ...b,
+        room_name: b.rooms?.name || b.room_name || 'Deluxe Room',
+        guest_name: b.guests?.full_name || b.guest_name || 'Guest',
+        guest_email: b.guests?.email || b.guest_email || ''
+      }));
+      if (statusFilter) {
+        allBookings = allBookings.filter((b) => b.status === statusFilter);
+      }
+    }
 
-    return { bookings };
+    if (search) {
+      allBookings = allBookings.filter((b) =>
+        (b.reference || '').toLowerCase().includes(search) ||
+        (b.guest_name || '').toLowerCase().includes(search) ||
+        (b.guest_email || '').toLowerCase().includes(search) ||
+        (b.room_name || '').toLowerCase().includes(search)
+      );
+    }
+
+    return { bookings: allBookings };
   },
 
   updateBookingStatus: async (id, status) => {
@@ -721,9 +787,16 @@ export const api = {
     try {
       const client = await ensureSupabase();
       if (client) {
-        await client.from('bookings').update({ status }).eq('id', id);
+        const queryId = isNaN(Number(id)) ? id : Number(id);
+        const { error } = await client.from('bookings').update({ status }).eq('id', queryId);
+        if (error) {
+          console.warn('Update by numeric ID failed, trying reference:', error);
+          await client.from('bookings').update({ status }).eq('reference', id);
+        }
       }
-    } catch (e) {}
+    } catch (e) {
+      console.warn('Supabase updateBookingStatus error:', e);
+    }
 
     return { success: true };
   },

@@ -12,18 +12,24 @@ let bookingState = {
   availableRooms: []
 };
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+  const urlParams = new URLSearchParams(window.location.search);
+  const paramIn = urlParams.get('checkIn') || urlParams.get('check_in') || urlParams.get('check-in');
+  const paramOut = urlParams.get('checkOut') || urlParams.get('check_out') || urlParams.get('check-out');
+  const paramAdults = urlParams.get('adults');
+  const paramChildren = urlParams.get('children');
+  const preselectedRoomSlug = urlParams.get('room') || urlParams.get('roomSlug') || urlParams.get('room_slug');
+
   const saved = sessionStorage.getItem('style_villa_booking_flow');
   if (saved) {
     try { bookingState = { ...bookingState, ...JSON.parse(saved) }; } catch {}
   }
 
-  const urlParams = new URLSearchParams(window.location.search);
-  if (urlParams.get('checkIn')) bookingState.checkIn = urlParams.get('checkIn');
-  if (urlParams.get('checkOut')) bookingState.checkOut = urlParams.get('checkOut');
-  if (urlParams.get('adults')) bookingState.adults = parseInt(urlParams.get('adults'), 10);
-  if (urlParams.get('children')) bookingState.children = parseInt(urlParams.get('children'), 10);
-  const preselectedRoomSlug = urlParams.get('room');
+  // URL parameters take precedence
+  if (paramIn) bookingState.checkIn = paramIn;
+  if (paramOut) bookingState.checkOut = paramOut;
+  if (paramAdults) bookingState.adults = parseInt(paramAdults, 10);
+  if (paramChildren) bookingState.children = parseInt(paramChildren, 10);
 
   if (!bookingState.checkIn || !bookingState.checkOut) {
     const today = new Date();
@@ -36,7 +42,14 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   bindEvents(preselectedRoomSlug);
-  renderStep(bookingState.step);
+
+  // If arriving from the homepage booking bar or with a selected room, immediately fetch live availability
+  if ((paramIn && paramOut) || preselectedRoomSlug) {
+    await fetchAvailableRooms(preselectedRoomSlug);
+    goToStep(2);
+  } else {
+    renderStep(bookingState.step);
+  }
 });
 
 function saveState() {
@@ -92,7 +105,14 @@ async function fetchAvailableRooms(autoSelectSlug = null) {
 
     if (autoSelectSlug) {
       const match = bookingState.availableRooms.find((r) => r.slug === autoSelectSlug);
-      if (match) selectRoom(match);
+      if (match) {
+        selectRoom(match);
+      } else {
+        bookingState.selectedRoom = null;
+        saveState();
+        updateStickySummary(bookingState);
+        showToast('Notice: The selected room is already booked for these dates. Please choose from the available rooms below.', 'error', 6000);
+      }
     }
   } catch (err) {
     if (container) container.innerHTML = `<div style="text-align: center; padding: 2rem; color: var(--danger);">${err.message}</div>`;

@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Book Your Stay - Style Villa Bentota</title>
+  <meta name="description" content="Reserve your boutique villa room in Bentota, Sri Lanka. Best rate guarantee with payment on arrival." />
+
+  <!-- Fonts & Styles -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,400&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/tokens.css" />
+  <link rel="stylesheet" href="css/base.css" />
+  <link rel="stylesheet" href="css/components.css" />
+  <link rel="stylesheet" href="css/pages.css" />
+  <style>
+    .progress-bar-wrap {
+      display: flex;
+      justify-content: space-between;
+      margin: 2rem 0;
+      position: relative;
+    }
+    .progress-bar-wrap::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 10%;
+      right: 10%;
+      height: 2px;
+      background: var(--border);
+      z-index: 1;
+      transform: translateY(-50%);
+    }
+    .progress-step {
+      position: relative;
+      z-index: 2;
+      background: var(--bg);
+      padding: 0 0.5rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.25rem;
+      font-size: var(--font-size-xs);
+      color: var(--muted);
+    }
+    .step-circle {
+      width: 2rem;
+      height: 2rem;
+      border-radius: 50%;
+      background: var(--surface);
+      border: 2px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      color: var(--muted);
+      transition: all var(--transition-base);
+    }
+    .progress-step.is-active .step-circle {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: var(--surface);
+    }
+    .progress-step.is-active {
+      color: var(--primary);
+      font-weight: 600;
+    }
+    .progress-step.is-completed .step-circle {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: var(--surface);
+    }
+    .booking-layout {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 2rem;
+      align-items: start;
+    }
+    @media (min-width: 960px) {
+      .booking-layout {
+        grid-template-columns: 1.8fr 1.2fr;
+      }
+    }
+    .sticky-summary {
+      position: sticky;
+      top: 6rem;
+    }
+  </style>
+</head>
+<body>
+  <a href="#booking-flow" class="skip-link">Skip to booking form</a>
+
+  <header class="site-header is-scrolled">
+    <div class="container nav-wrapper">
+      <a href="index.html" class="brand-logo">Style Villa</a>
+      <a href="index.html" class="nav-link">&larr; Back to Home</a>
+    </div>
+  </header>
+
+  <main class="container" id="booking-flow" style="margin-top: 5.5rem; padding-bottom: 5rem;">
+    <!-- Step Indicator -->
+    <div class="progress-bar-wrap">
+      <div class="progress-step is-active" id="p-step-1">
+        <div class="step-circle">1</div>
+        <span>Dates & Guests</span>
+      </div>
+      <div class="progress-step" id="p-step-2">
+        <div class="step-circle">2</div>
+        <span>Choose Room</span>
+      </div>
+      <div class="progress-step" id="p-step-3">
+        <div class="step-circle">3</div>
+        <span>Guest Details</span>
+      </div>
+    </div>
+
+    <div class="booking-layout">
+      <!-- Left Column: Step Contents -->
+      <div class="steps-container">
+        <!-- STEP 1: Dates & Guests -->
+        <section class="step-section card" id="step-1-section" style="padding: 2rem;">
+          <h2 style="font-size: 1.5rem; margin-bottom: 0.5rem;">Select Dates & Guests</h2>
+          <p style="color: var(--muted); margin-bottom: 1.5rem; font-size: 0.875rem;">
+            Choose your check-in and check-out dates to browse available boutique rooms.
+          </p>
+          <form id="step-1-form">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+              <div class="form-group">
+                <label for="book-check-in" class="form-label">Check-in Date</label>
+                <input type="date" id="book-check-in" class="form-input" required />
+              </div>
+              <div class="form-group">
+                <label for="book-check-out" class="form-label">Check-out Date</label>
+                <input type="date" id="book-check-out" class="form-input" required />
+              </div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+              <div class="form-group">
+                <label for="book-adults" class="form-label">Adults</label>
+                <select id="book-adults" class="form-select">
+                  <option value="1">1 Adult</option>
+                  <option value="2" selected>2 Adults</option>
+                  <option value="3">3 Adults</option>
+                  <option value="4">4 Adults</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="book-children" class="form-label">Children</label>
+                <select id="book-children" class="form-select">
+                  <option value="0" selected>0 Children</option>
+                  <option value="1">1 Child</option>
+                  <option value="2">2 Children</option>
+                </select>
+              </div>
+            </div>
+            <button type="submit" class="btn btn-primary" style="margin-top: 1rem; width: 100%;">
+              Search Available Rooms &rarr;
+            </button>
+          </form>
+        </section>
+
+        <!-- STEP 2: Choose Room -->
+        <section class="step-section" id="step-2-section" style="display: none;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+            <h2 style="font-size: 1.5rem;">Choose an Available Room</h2>
+            <button type="button" class="btn btn-outline btn-sm" data-action="prev-step">&larr; Change Dates</button>
+          </div>
+          <div id="available-rooms-list">
+            <!-- Populated via booking.js -->
+          </div>
+        </section>
+
+        <!-- STEP 3: Guest Details -->
+        <section class="step-section card" id="step-3-section" style="display: none; padding: 2rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <h2 style="font-size: 1.5rem;">Guest Information</h2>
+            <button type="button" class="btn btn-outline btn-sm" data-action="prev-step">&larr; Change Room</button>
+          </div>
+          <div id="step-3-error"></div>
+          <form id="step-3-form">
+            <div class="form-group">
+              <label for="guest-name" class="form-label">Full Name *</label>
+              <input type="text" id="guest-name" class="form-input" placeholder="e.g. John Doe" required />
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+              <div class="form-group">
+                <label for="guest-email" class="form-label">Email Address *</label>
+                <input type="email" id="guest-email" class="form-input" placeholder="john@example.com" required />
+              </div>
+              <div class="form-group">
+                <label for="guest-phone" class="form-label">Phone Number *</label>
+                <input type="tel" id="guest-phone" class="form-input" placeholder="+94 77 123 4567" required />
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="guest-country" class="form-label">Country of Residence *</label>
+              <input type="text" id="guest-country" class="form-input" placeholder="e.g. Sri Lanka, United Kingdom" required />
+            </div>
+            <div class="form-group">
+              <label for="guest-requests" class="form-label">Special Requests (Optional)</label>
+              <textarea id="guest-requests" class="form-textarea" rows="2" placeholder="Dietary restrictions, estimated arrival time, etc."></textarea>
+            </div>
+            <div class="form-group" style="display: flex; gap: 0.5rem; align-items: flex-start; margin-top: 1rem;">
+              <input type="checkbox" id="agree-terms" style="margin-top: 0.25rem;" required />
+              <label for="agree-terms" style="font-size: 0.8125rem; color: var(--muted);">
+                I agree to the hotel booking terms. Payment is collected upon arrival at Style Villa. Free cancellation up to 48 hours before check-in.
+              </label>
+            </div>
+            <button type="submit" class="btn btn-primary btn-lg" id="submit-booking-btn" style="width: 100%; margin-top: 1rem;">
+              Complete Reservation
+            </button>
+          </form>
+        </section>
+      </div>
+
+      <!-- Right Column: Sticky Summary -->
+      <aside class="card sticky-summary" style="padding: 1.5rem;">
+        <h3 style="font-size: 1.15rem; margin-bottom: 1rem;">Reservation Summary</h3>
+        <div id="booking-summary-content">
+          <p style="color: var(--muted); font-size: 0.875rem;">Loading summary...</p>
+        </div>
+      </aside>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-content">
+      <p style="font-size: 0.875rem;">&copy; 2026 Style Villa. All Rights Reserved.</p>
+    </div>
+  </footer>
+
+  <script type="module" src="js/booking.js"></script>
+</body>
+</html>

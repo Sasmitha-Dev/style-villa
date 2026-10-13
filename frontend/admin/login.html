@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Sign In - Style Villa</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,400&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/tokens.css" />
+  <link rel="stylesheet" href="../css/base.css" />
+  <link rel="stylesheet" href="../css/components.css" />
+  <link rel="stylesheet" href="../css/pages.css" />
+</head>
+<body style="min-height: 100vh; display: flex; align-items: center; justify-content: center; background-color: var(--bg); padding: 1.5rem;">
+  <main class="card" style="width: 100%; max-width: 420px; padding: 2.5rem; box-shadow: var(--shadow-lg);">
+    <div style="text-align: center; margin-bottom: 2rem;">
+      <a href="../index.html" class="brand-logo" style="font-size: 1.5rem;">Style Villa</a>
+      <h1 style="font-size: 1.25rem; font-weight: 500; margin-top: 0.5rem; color: var(--muted);">Property Management</h1>
+    </div>
+
+    <div id="login-error" style="color: var(--danger); font-size: 0.875rem; margin-bottom: 1rem; text-align: center;"></div>
+
+    <form id="admin-login-form">
+      <div class="form-group">
+        <label for="admin-email" class="form-label">Admin Email</label>
+        <input type="email" id="admin-email" class="form-input" value="admin@stylevilla.com" required autocomplete="username" />
+      </div>
+      <div class="form-group">
+        <label for="admin-password" class="form-label">Password</label>
+        <input type="password" id="admin-password" class="form-input" value="AdminPass123!" required autocomplete="current-password" />
+      </div>
+      <button type="submit" class="btn btn-primary" id="login-submit-btn" style="width: 100%; margin-top: 1rem;">
+        Sign In
+      </button>
+    </form>
+
+    <div style="margin-top: 1.5rem; text-align: center;">
+      <a href="../index.html" style="font-size: 0.8125rem; color: var(--muted);">&larr; Return to Guest Website</a>
+    </div>
+  </main>
+
+  <script type="module" src="../js/admin.js"></script>
+</body>
+</html>

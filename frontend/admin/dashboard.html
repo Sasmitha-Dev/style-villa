@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Dashboard - Style Villa</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,400&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/tokens.css" />
+  <link rel="stylesheet" href="../css/base.css" />
+  <link rel="stylesheet" href="../css/components.css" />
+  <link rel="stylesheet" href="../css/admin.css" />
+</head>
+<body>
+  <div class="admin-layout">
+    <!-- Sidebar -->
+    <aside class="admin-sidebar">
+      <div>
+        <a href="../index.html" class="brand-logo" style="font-size: 1.25rem;">Style Villa</a>
+        <div style="font-size: 0.75rem; color: var(--muted); margin-top: 0.25rem;">Property Management</div>
+      </div>
+      <nav style="display: flex; flex-direction: column; gap: 0.25rem; flex: 1;">
+        <a class="admin-nav-item is-active" data-target="overview">Overview</a>
+        <a class="admin-nav-item" data-target="bookings">Bookings</a>
+        <a class="admin-nav-item" data-target="rooms">Rooms</a>
+        <a class="admin-nav-item" data-target="blocked">Blocked Dates</a>
+        <a class="admin-nav-item" data-target="reviews">Reviews</a>
+        <a class="admin-nav-item" data-target="settings">Settings</a>
+      </nav>
+      <button type="button" class="btn btn-outline btn-sm" id="admin-logout-btn" style="width: 100%;">
+        Sign Out
+      </button>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="admin-main">
+      <!-- 1. OVERVIEW TAB -->
+      <section class="admin-tab-pane" id="tab-overview">
+        <h2 style="font-size: 1.5rem; margin-bottom: 1.5rem;">Dashboard Overview</h2>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <span style="font-size: 0.8125rem; color: var(--muted);">Today's Arrivals</span>
+            <div class="stat-val" id="stat-arrivals">-</div>
+          </div>
+          <div class="stat-card">
+            <span style="font-size: 0.8125rem; color: var(--muted);">Today's Departures</span>
+            <div class="stat-val" id="stat-departures">-</div>
+          </div>
+          <div class="stat-card">
+            <span style="font-size: 0.8125rem; color: var(--muted);">7-Day Occupancy</span>
+            <div class="stat-val" id="stat-occupancy">-%</div>
+          </div>
+          <div class="stat-card">
+            <span style="font-size: 0.8125rem; color: var(--muted);">Monthly Revenue</span>
+            <div class="stat-val" id="stat-revenue">$0</div>
+          </div>
+          <div class="stat-card">
+            <span style="font-size: 0.8125rem; color: var(--muted);">Pending Bookings</span>
+            <div class="stat-val" id="stat-pending">-</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2. BOOKINGS TAB -->
+      <section class="admin-tab-pane" id="tab-bookings" style="display: none;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+          <h2 style="font-size: 1.5rem;">Reservations</h2>
+          <div style="display: flex; gap: 0.75rem;">
+            <input type="text" id="booking-search-input" class="form-input" placeholder="Search..." style="width: 200px;" />
+            <select id="booking-status-filter" class="form-select" style="width: 140px;">
+              <option value="">All Statuses</option>
+              <option value="pending">Pending</option>
+              <option value="confirmed">Confirmed</option>
+              <option value="completed">Completed</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
+          </div>
+        </div>
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Reference</th><th>Guest</th><th>Room</th><th>Dates</th><th>Total</th><th>Status</th><th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="bookings-tbody"></tbody>
+        </table>
+      </section>
+
+      <!-- 3. ROOMS TAB -->
+      <section class="admin-tab-pane" id="tab-rooms" style="display: none;">
+        <h2 style="font-size: 1.5rem; margin-bottom: 1.5rem;">Rooms & Rates</h2>
+        <div id="admin-rooms-list"></div>
+      </section>
+
+      <!-- 4. BLOCKED DATES TAB -->
+      <section class="admin-tab-pane" id="tab-blocked" style="display: none;">
+        <h2 style="font-size: 1.5rem; margin-bottom: 1rem;">Blocked Dates</h2>
+        <form class="card" id="add-blocked-date-form" style="padding: 1.25rem; margin-bottom: 1.5rem;">
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 0.75rem;">
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label">Room</label>
+              <select id="block-room-id" class="form-select" required>
+                <option value="1">Room 1</option><option value="2">Room 2</option>
+                <option value="3">Room 3</option><option value="4">Room 4</option>
+                <option value="5">Room 5</option><option value="6">Room 6</option>
+              </select>
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label">Start Date</label>
+              <input type="date" id="block-start-date" class="form-input" required />
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label">End Date</label>
+              <input type="date" id="block-end-date" class="form-input" required />
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label">Reason</label>
+              <input type="text" id="block-reason" class="form-input" placeholder="Maintenance" />
+            </div>
+          </div>
+          <button type="submit" class="btn btn-primary btn-sm" style="margin-top: 1rem;">Block Dates</button>
+        </form>
+        <table class="admin-table">
+          <thead><tr><th>Room</th><th>Start</th><th>End</th><th>Reason</th><th>Actions</th></tr></thead>
+          <tbody id="blocked-dates-tbody"></tbody>
+        </table>
+      </section>
+
+      <!-- 5. REVIEWS MODERATION TAB -->
+      <section class="admin-tab-pane" id="tab-reviews" style="display: none;">
+        <h2 style="font-size: 1.5rem; margin-bottom: 1.5rem;">Review Moderation</h2>
+        <table class="admin-table">
+          <thead><tr><th>Guest</th><th>Rating</th><th>Comment</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead>
+          <tbody id="reviews-tbody"></tbody>
+        </table>
+      </section>
+
+      <!-- 6. SETTINGS TAB -->
+      <section class="admin-tab-pane" id="tab-settings" style="display: none;">
+        <h2 style="font-size: 1.5rem; margin-bottom: 1.5rem;">Hotel Settings</h2>
+        <form class="card" id="admin-settings-form" style="max-width: 600px; padding: 1.5rem;">
+          <div class="form-group">
+            <label class="form-label">Contact Phone</label>
+            <input type="text" id="set-phone" class="form-input" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Contact Email</label>
+            <input type="email" id="set-email" class="form-input" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Address</label>
+            <input type="text" id="set-address" class="form-input" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Cancellation Policy</label>
+            <textarea id="set-cancellation" class="form-textarea" rows="2"></textarea>
+          </div>
+          <button type="submit" class="btn btn-primary btn-sm">Save Settings</button>
+        </form>
+      </section>
+    </main>
+  </div>
+  <script type="module" src="../js/admin.js"></script>
+</body>
+</html>

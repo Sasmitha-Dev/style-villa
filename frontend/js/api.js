@@ -448,7 +448,7 @@ export const api = {
 
     const client = await ensureSupabase();
 
-    // 1. Double-booking conflict check: query active reservations in Supabase
+    // 1. Double-booking & maintenance conflict check: query active reservations and blocked dates in Supabase
     if (client) {
       try {
         const { data: conflicts, error: conflictErr } = await client
@@ -461,6 +461,19 @@ export const api = {
 
         if (!conflictErr && conflicts && conflicts.length > 0) {
           const err = new Error('This room was just booked for these dates by another guest. Please select another room or change dates.');
+          err.status = 409;
+          throw err;
+        }
+
+        const { data: blockedBlocks, error: blockErr } = await client
+          .from('blocked_dates')
+          .select('id')
+          .eq('room_id', Number(room.id))
+          .lt('start_date', data.checkOut)
+          .gt('end_date', data.checkIn);
+
+        if (!blockErr && blockedBlocks && blockedBlocks.length > 0) {
+          const err = new Error('This room is blocked for maintenance or private use on the selected dates. Please select another room or change dates.');
           err.status = 409;
           throw err;
         }
@@ -820,36 +833,151 @@ export const api = {
 
   getAdminBlockedDates: async () => {
     try {
+      let data = null;
       const client = await ensureSupabase();
       if (client) {
-        const { data } = await client.from('blocked_dates').select('*, rooms(name)');
-        if (data) {
-          return data.map((b) => ({ ...b, room_name: b.rooms?.name || 'All Rooms' }));
+        try {
+          const res = await client
+            .from('blocked_dates')
+            .select('*, rooms(name)')
+            .order('start_date', { ascending: false });
+          if (!res.error && Array.isArray(res.data)) {
+            data = res.data;
+          }
+        } catch (clientErr) {
+          console.warn('Supabase JS query warning, attempting REST:', clientErr);
         }
       }
-    } catch (e) {}
+
+      // Direct REST fallback
+      if (!data) {
+        try {
+          const restRes = await fetch(`${SUPABASE_URL}/rest/v1/blocked_dates?select=*,rooms(name)&order=start_date.desc`, {
+            headers: {
+              apikey: SUPABASE_ANON_KEY,
+              Authorization: `Bearer ${SUPABASE_ANON_KEY}`
+            }
+          });
+          if (restRes.ok) {
+            data = await restRes.json();
+          }
+        } catch (restErr) {
+          console.warn('Direct REST getAdminBlockedDates warning:', restErr);
+        }
+      }
+
+      if (Array.isArray(data)) {
+        const rooms = await api.getRooms();
+        const dbList = data.map((b) => ({
+          ...b,
+          room_name: b.rooms?.name || rooms.find((r) => Number(r.id) === Number(b.room_id))?.name || `Room ${b.room_id}`
+        }));
+
+        setLocalItem('style_villa_local_blocked_dates', dbList);
+        return dbList;
+      }
+    } catch (e) {
+      console.warn('Supabase getAdminBlockedDates error:', e);
+    }
     return getLocalItem('style_villa_local_blocked_dates', []);
   },
 
   createBlockedDate: async (data) => {
-    const newBlock = {
+    const roomId = Number(data.roomId);
+    if (!roomId || isNaN(roomId)) {
+      throw new Error('Please select a valid room.');
+    }
+    if (!data.startDate || !data.endDate) {
+      throw new Error('Please provide both start and end dates.');
+    }
+    if (data.endDate <= data.startDate) {
+      throw new Error('End date must be after start date.');
+    }
+
+    const rooms = await api.getRooms();
+    const roomName = rooms.find((r) => Number(r.id) === roomId)?.name || `Room ${roomId}`;
+    const reason = (data.reason || '').trim() || 'Maintenance';
+
+    let newBlock = {
       id: Date.now(),
-      room_id: data.roomId,
+      room_id: roomId,
       start_date: data.startDate,
       end_date: data.endDate,
-      reason: data.reason || 'Maintenance',
-      room_name: (await api.getRooms()).find((r) => r.id === data.roomId)?.name || 'Room'
+      reason,
+      room_name: roomName
     };
-    const local = getLocalItem('style_villa_local_blocked_dates', []);
-    local.push(newBlock);
-    setLocalItem('style_villa_local_blocked_dates', local);
 
+    const dbPayload = {
+      room_id: roomId,
+      start_date: data.startDate,
+      end_date: data.endDate,
+      reason
+    };
+
+    let saved = false;
+
+    // 1. Primary: Try Supabase JS client
     try {
       const client = await ensureSupabase();
       if (client) {
-        await client.from('blocked_dates').insert([newBlock]);
+        const { data: inserted, error } = await client
+          .from('blocked_dates')
+          .insert([dbPayload])
+          .select('*, rooms(name)')
+          .single();
+
+        if (!error && inserted) {
+          newBlock = {
+            ...inserted,
+            room_name: inserted.rooms?.name || roomName
+          };
+          saved = true;
+        } else if (error) {
+          console.warn('Supabase JS insert returned error, falling back to direct REST:', error);
+        }
       }
-    } catch (e) {}
+    } catch (clientErr) {
+      console.warn('Supabase JS insert threw error, falling back to direct REST:', clientErr);
+    }
+
+    // 2. Secondary fallback: Direct Supabase REST API POST
+    if (!saved) {
+      try {
+        const restRes = await fetch(`${SUPABASE_URL}/rest/v1/blocked_dates?select=*,rooms(name)`, {
+          method: 'POST',
+          headers: {
+            apikey: SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json',
+            Prefer: 'return=representation'
+          },
+          body: JSON.stringify([dbPayload])
+        });
+
+        if (restRes.ok) {
+          const resBody = await restRes.json();
+          const created = Array.isArray(resBody) ? resBody[0] : resBody;
+          if (created) {
+            newBlock = {
+              ...created,
+              room_name: created.rooms?.name || roomName
+            };
+            saved = true;
+          }
+        } else {
+          const errText = await restRes.text();
+          console.error('Supabase REST insert returned status:', restRes.status, errText);
+          throw new Error(`Database insert failed (${restRes.status}): ${errText}`);
+        }
+      } catch (restErr) {
+        console.error('Direct REST insert error:', restErr);
+        throw restErr;
+      }
+    }
+
+    const local = getLocalItem('style_villa_local_blocked_dates', []);
+    local.unshift(newBlock);
+    setLocalItem('style_villa_local_blocked_dates', local);
 
     return newBlock;
   },
@@ -858,12 +986,34 @@ export const api = {
     const local = getLocalItem('style_villa_local_blocked_dates', []);
     setLocalItem('style_villa_local_blocked_dates', local.filter((b) => String(b.id) !== String(id)));
 
+    const queryId = isNaN(Number(id)) ? id : Number(id);
+    let deleted = false;
+
     try {
       const client = await ensureSupabase();
       if (client) {
-        await client.from('blocked_dates').delete().eq('id', id);
+        const { error } = await client.from('blocked_dates').delete().eq('id', queryId);
+        if (!error) deleted = true;
       }
-    } catch (e) {}
+    } catch (e) {
+      console.warn('Supabase JS delete warning, falling back to REST:', e);
+    }
+
+    if (!deleted) {
+      try {
+        const restRes = await fetch(`${SUPABASE_URL}/rest/v1/blocked_dates?id=eq.${queryId}`, {
+          method: 'DELETE',
+          headers: {
+            apikey: SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${SUPABASE_ANON_KEY}`
+          }
+        });
+        if (restRes.ok) deleted = true;
+      } catch (restErr) {
+        console.error('Direct REST delete error:', restErr);
+      }
+    }
+
     return { success: true };
   },
 

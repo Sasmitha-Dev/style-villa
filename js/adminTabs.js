@@ -47,20 +47,89 @@ export async function loadRoomsTable() {
 }
 
 // Blocked Dates Tab
+export async function populateBlockedRoomsSelect() {
+  const select = document.getElementById('block-room-id');
+  if (!select) return;
+  try {
+    const rooms = await api.getRooms();
+    if (rooms && rooms.length > 0) {
+      const currentVal = select.value;
+      select.innerHTML = rooms
+        .map((r) => `<option value="${r.id}">${r.name}</option>`)
+        .join('');
+      if (currentVal && rooms.some((r) => String(r.id) === String(currentVal))) {
+        select.value = currentVal;
+      }
+    }
+  } catch (e) {
+    console.warn('Failed to populate room options:', e);
+  }
+}
+
 export function initBlockedDatesTab() {
-  document.getElementById('add-blocked-date-form')?.addEventListener('submit', async (e) => {
+  populateBlockedRoomsSelect();
+
+  // Set min dates for start and end date pickers to today
+  const today = new Date().toISOString().split('T')[0];
+  const startDateInput = document.getElementById('block-start-date');
+  const endDateInput = document.getElementById('block-end-date');
+
+  if (startDateInput) {
+    startDateInput.min = today;
+    startDateInput.addEventListener('change', () => {
+      if (endDateInput && startDateInput.value) {
+        endDateInput.min = startDateInput.value;
+        if (endDateInput.value && endDateInput.value <= startDateInput.value) {
+          const nextDay = new Date(startDateInput.value);
+          nextDay.setDate(nextDay.getDate() + 1);
+          endDateInput.value = nextDay.toISOString().split('T')[0];
+        }
+      }
+    });
+  }
+
+  const form = document.getElementById('add-blocked-date-form');
+  form?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const roomId = parseInt(document.getElementById('block-room-id').value, 10);
     const startDate = document.getElementById('block-start-date').value;
     const endDate = document.getElementById('block-end-date').value;
-    const reason = document.getElementById('block-reason').value.trim();
+    const reason = document.getElementById('block-reason').value.trim() || 'Maintenance';
+
+    if (!roomId || isNaN(roomId)) {
+      showToast('Please select a valid room.', 'error');
+      return;
+    }
+    if (!startDate || !endDate) {
+      showToast('Please select both start and end dates.', 'error');
+      return;
+    }
+    if (endDate <= startDate) {
+      showToast('End date must be after start date.', 'error');
+      return;
+    }
+
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const origBtnText = submitBtn ? submitBtn.innerHTML : 'Block Dates';
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Blocking...';
+    }
 
     try {
       await api.createBlockedDate({ roomId, startDate, endDate, reason });
       showToast('Dates blocked successfully.', 'success');
-      e.target.reset();
-      loadBlockedDatesTable();
-    } catch (err) { showToast(err.message, 'error'); }
+      form.reset();
+      populateBlockedRoomsSelect();
+      await loadBlockedDatesTable();
+    } catch (err) {
+      showToast(err.message || 'Failed to block dates.', 'error');
+    } finally {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = origBtnText;
+      }
+    }
   });
 }
 
@@ -69,8 +138,9 @@ export async function loadBlockedDatesTable() {
   if (!tbody) return;
 
   try {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--muted); padding: 1.5rem;"><div class="spinner" style="margin: 0 auto 0.5rem auto;"></div> Loading blocked dates...</td></tr>';
     const list = await api.getAdminBlockedDates();
-    if (list.length === 0) {
+    if (!list || list.length === 0) {
       tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--muted); padding: 1.5rem;">No dates currently blocked.</td></tr>';
       return;
     }
@@ -86,16 +156,26 @@ export async function loadBlockedDatesTable() {
 
     tbody.querySelectorAll('.delete-block-btn').forEach((btn) => {
       btn.addEventListener('click', async (e) => {
+        const btnEl = e.currentTarget;
+        const blockId = btnEl.dataset.id;
         if (confirm('Unblock these dates?')) {
+          btnEl.disabled = true;
+          btnEl.textContent = 'Removing...';
           try {
-            await api.deleteBlockedDate(e.currentTarget.dataset.id);
+            await api.deleteBlockedDate(blockId);
             showToast('Unblocked successfully.', 'success');
-            loadBlockedDatesTable();
-          } catch (err) { showToast(err.message, 'error'); }
+            await loadBlockedDatesTable();
+          } catch (err) {
+            btnEl.disabled = false;
+            btnEl.textContent = 'Delete';
+            showToast(err.message || 'Failed to remove block.', 'error');
+          }
         }
       });
     });
-  } catch (err) { tbody.innerHTML = `<tr><td colspan="5" style="color: var(--danger);">${err.message}</td></tr>`; }
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="5" style="color: var(--danger); text-align: center; padding: 1.5rem;">${err.message || 'Failed to load blocked dates'}</td></tr>`;
+  }
 }
 
 // Reviews Tab

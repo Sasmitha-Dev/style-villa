@@ -12,7 +12,7 @@ export function formatCurrency(amount, currency = 'USD') {
 
 export function formatDate(dateStr) {
   if (!dateStr) return '';
-  const [y, m, d] = dateStr.split('-');
+  const [y, m, d] = String(dateStr).slice(0, 10).split('-');
   const date = new Date(Date.UTC(y, m - 1, d));
   return date.toLocaleDateString('en-US', {
     timeZone: 'UTC',

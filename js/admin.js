@@ -3,6 +3,7 @@ import { ensureSupabase } from './supabaseClient.js';
 import { formatCurrency, formatDate, showToast } from './utils.js';
 import {
   loadRoomsTable,
+  populateBlockedRoomsSelect,
   initBlockedDatesTab,
   loadBlockedDatesTable,
   loadReviewsTable,
@@ -75,6 +76,11 @@ async function initAdminDashboard() {
     showToast('Reservations refreshed.', 'info', 2000);
   });
 
+  document.getElementById('btn-refresh-blocked')?.addEventListener('click', () => {
+    loadBlockedDatesTable();
+    showToast('Blocked dates refreshed.', 'info', 2000);
+  });
+
   loadOverviewStats();
   initBookingsTab();
   initBlockedDatesTab();
@@ -90,6 +96,12 @@ async function initAdminDashboard() {
           const bookingsPane = document.getElementById('tab-bookings');
           if (bookingsPane && bookingsPane.style.display !== 'none') {
             loadBookingsTable();
+          }
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'blocked_dates' }, () => {
+          const blockedPane = document.getElementById('tab-blocked');
+          if (blockedPane && blockedPane.style.display !== 'none') {
+            loadBlockedDatesTable();
           }
         })
         .subscribe();
@@ -108,6 +120,10 @@ async function initAdminDashboard() {
     if (bookingsPane && bookingsPane.style.display !== 'none') {
       loadBookingsTable();
     }
+    const blockedPane = document.getElementById('tab-blocked');
+    if (blockedPane && blockedPane.style.display !== 'none') {
+      loadBlockedDatesTable();
+    }
   }, 8000);
 }
 
@@ -123,7 +139,10 @@ function switchTab(tabId) {
   if (tabId === 'overview') loadOverviewStats();
   if (tabId === 'bookings') loadBookingsTable();
   if (tabId === 'rooms') loadRoomsTable();
-  if (tabId === 'blocked') loadBlockedDatesTable();
+  if (tabId === 'blocked') {
+    populateBlockedRoomsSelect();
+    loadBlockedDatesTable();
+  }
   if (tabId === 'reviews') loadReviewsTable();
   if (tabId === 'settings') loadSettingsForm();
 }

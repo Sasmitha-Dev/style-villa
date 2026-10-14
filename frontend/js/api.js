@@ -119,9 +119,9 @@ export const DEFAULT_SETTINGS = {
     'Garden'
   ],
   location_query: 'Style Villa Bentota',
-  location_address: 'Dedduwa, Lunuganga Road, Bentota 80500, Sri Lanka',
-  contact_email: 'info@stylevilla.lk',
-  contact_phone: '+94 34 227 5000',
+  location_address: 'Polwatta, Dedduwa, Haburugala, 80500 Bentota, Sri Lanka',
+  contact_email: 'info@stylevilla.com',
+  contact_phone: '+94766218498',
   check_in_time: '14:00',
   check_out_time: '11:00',
   currency: 'USD',

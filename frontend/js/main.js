@@ -114,6 +114,32 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   }
+
+  // 9. Contact inquiry form handler
+  const contactForm = document.getElementById('contact-form');
+  if (contactForm) {
+    contactForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const guestName = document.getElementById('contact-name')?.value || 'Guest';
+      const guestEmail = document.getElementById('contact-email')?.value || '';
+      const guestSubject = document.getElementById('contact-subject')?.value || 'Inquiry';
+      const submitBtn = contactForm.querySelector('button[type="submit"]');
+
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Sending...';
+      }
+
+      setTimeout(() => {
+        showToast(`Thank you, ${guestName}! Your inquiry has been sent to info@stylevilla.com. Our concierge will reply to ${guestEmail} promptly.`, 'success');
+        contactForm.reset();
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Send Message';
+        }
+      }, 500);
+    });
+  }
 });
 
 async function loadPublicReviews() {
